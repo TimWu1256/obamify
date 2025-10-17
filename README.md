@@ -1,37 +1,50 @@
-[(try it here)](https://obamify.com/)
-# obamify
-revolutionary new technology that turns any image into obama
+# obamify CLI
+
+Revolutionary morphing animation technology - now as a headless CLI for generating GIF animations
 
 ![example](example.gif)
 
-# How to use
+## Features
 
-**Use the ui at the top of the window to control the animation, choose between saved transformations, and generate new ones.** You can change the source image and target image, and choose how they are cropped to a square (tip: if both the images are faces, try making the eyes overlap). You can also change these advanced settings:
-| Setting               | Description                                                                                     |
-|-----------------------|-------------------------------------------------------------------------------------------------|
-| resolution            | How many cells the images will be divided into. Higher resolution will capture more high frequency details. |
-| proximity importance  | How much the algorithm changes the original image to make it look like the target image. Increase this if you want a more subtle transformation. |
-| algorithm             | The algorithm used to calculate the assignment of each pixel. Optimal will find the mathematically optimal solution, but is extremely slow for high resolutions. |
+-   Headless GPU rendering with wgpu (Vulkan backend)
+-   Built-in presets: wisetree, blackhole, cat, cat2, colorful
+-   Auto mode: transform any image using genetic algorithm
+-   Docker support with development/production modes
 
-# Installations
+## Usage
 
-Install the latest version in [releases](https://github.com/Spu7Nix/obamify/releases). Unzip and run the .exe file inside!
+### Docker (Recommended)
 
-### Building from source
+**Development mode** (default):
 
-1. Install [Rust](https://www.rust-lang.org/tools/install)
-2. Run `cargo run --release` in the project folder
+```bash
+# Preset mode
+docker compose run --rm obamify-cli --preset wisetree --output output/test.gif
 
-#### Running the web version locally
-1. Install [Rust](https://www.rust-lang.org/tools/install)
-2. Install the required target with `rustup target add wasm32-unknown-unknown`
-3. Install Trunk with `cargo install --locked trunk`
-4. Run `trunk serve --release --open`
+# Auto mode (transform to Obama)
+docker compose run --rm obamify-cli --input image.png --auto --output output/result.gif
 
-# Contributing
+# Custom target
+docker compose run --rm obamify-cli --input source.png --target target.png --output output/result.gif
+```
 
-Please open an issue or a pull request if you have any suggestions or find any bugs :)
+**Production mode**:
 
-# How it works
+```bash
+# Edit .env: BUILD_MODE=production
+docker compose build
+docker compose run --rm obamify-cli --preset wisetree --output output/test.gif
+```
+
+### Parameters
+
+-   `--resolution`: Render resolution (default: 2048)
+-   `--output-resolution`: Output GIF size (default: 400)
+-   `--gif-delay`: Frame delay in centiseconds (default: 8 = 12.5 FPS)
+-   `--max-frames`: Frame count (default: 140)
+-   `--sim-speed`: Speed multiplier (default: 1.5)
+-   `--dst-force`: Transformation strength (default: 0.14)
+
+## How it works
 
 magic

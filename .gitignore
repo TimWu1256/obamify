@@ -13,3 +13,6 @@ target_wasm
 .lycheecache
 
 .vscode/*
+
+*.log
+output/

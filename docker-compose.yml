@@ -1,0 +1,30 @@
+services:
+  obamify-cli:
+    build:
+      context: .
+      target: ${BUILD_MODE:-development}
+    image: obamify-cli:${BUILD_MODE:-development}
+    container_name: obamify-cli
+    volumes:
+      # Development mode: mount source code (set BUILD_MODE=production to disable)
+      - .:/app${VOLUME_MOUNT}
+      # Always mount output directory
+      - ./output:/app/output
+    environment:
+      - RUST_LOG=info
+      - VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json
+
+# Usage:
+# Development mode (default in .env):
+#   BUILD_MODE=development
+#   Source code is mounted, changes are reflected immediately
+#   First run will compile, subsequent runs use cached binary
+#   docker compose run --rm obamify-cli --preset wisetree --output output/test.gif
+#   docker compose run --rm obamify-cli --input image.png --auto --output output/auto.gif
+#
+# Production mode (change in .env):
+#   BUILD_MODE=production
+#   Source code is copied during build, no volume mount
+#   Faster runtime, but need to rebuild for code changes
+#   docker compose build
+#   docker compose run --rm obamify-cli --preset wisetree --output output/test.gif

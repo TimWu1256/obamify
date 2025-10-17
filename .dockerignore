@@ -1,0 +1,26 @@
+# Build artifacts
+target/
+output/
+
+# Development files
+.env
+.git/
+.gitignore
+*.log
+.vscode/
+.idea/
+.DS_Store
+
+# Documentation
+README.md
+CLI_README.md
+LICENSE
+
+# Keep these for build
+# Cargo.toml
+# Cargo.lock
+# rust-toolchain
+# src/
+# presets/
+# assets/
+# docker-entrypoint.sh
