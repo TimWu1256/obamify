@@ -13,17 +13,20 @@ services:
     environment:
       - RUST_LOG=info
       - VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json
+      - FORCE_BUILD=${FORCE_BUILD:-false}
 
 # Usage:
 # Development mode (default in .env):
 #   BUILD_MODE=development
+#   FORCE_BUILD=false
 #   Source code is mounted, changes are reflected immediately
 #   First run will compile, subsequent runs use cached binary
 #   docker compose run --rm obamify-cli --preset wisetree --output output/test.gif
-#   docker compose run --rm obamify-cli --input image.png --auto --output output/auto.gif
+#   docker compose run --rm obamify-cli --source image.png output/auto.gif
 #
 # Production mode (change in .env):
 #   BUILD_MODE=production
+#   FORCE_BUILD=true (recommended to force rebuild)
 #   Source code is copied during build, no volume mount
 #   Faster runtime, but need to rebuild for code changes
 #   docker compose build
