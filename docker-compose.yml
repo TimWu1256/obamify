@@ -12,8 +12,11 @@ services:
       - ./output:/app/output
     environment:
       - RUST_LOG=info
-      - VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json
+      - XDG_RUNTIME_DIR=/tmp/xdg_runtime
       - FORCE_BUILD=${FORCE_BUILD:-false}
+    # create an in-memory runtime dir so Vulkan/wgpu can find XDG_RUNTIME_DIR in headless/container envs
+    tmpfs:
+      - /tmp/xdg_runtime
 
 # Usage:
 # Development mode (default in .env):

@@ -25,6 +25,7 @@ struct ParamsJfa {
     _pad: u32,
 }
 
+#[allow(dead_code)]
 pub struct HeadlessRenderer {
     device: wgpu::Device,
     queue: wgpu::Queue,

@@ -5,8 +5,6 @@ use image::ImageBuffer;
 use crate::types::{SeedColor, SeedPos};
 use crate::preset::Preset;
 
-#[cfg(not(target_arch = "wasm32"))]
-use crate::preset::UnprocessedPreset;
 
 // const DST_FORCE: f32 = 0.2;
 pub fn init_image(sidelen: u32, source: Preset) -> (u32, Vec<SeedPos>, Vec<SeedColor>, Sim) {
@@ -29,14 +27,12 @@ pub fn init_image(sidelen: u32, source: Preset) -> (u32, Vec<SeedPos>, Vec<SeedC
     (seeds_n as u32, seeds, colors, sim)
 }
 
-// Canvas 功能需要 GUI feature（暫時禁用）
-/*
 #[cfg(not(target_arch = "wasm32"))]
 pub fn init_canvas(
     sidelen: u32,
-    source: UnprocessedPreset,
+    source: crate::preset::UnprocessedPreset,
 ) -> (u32, Vec<SeedPos>, Vec<SeedColor>, Sim) {
-    const DRAWING_CANVAS_SIZE: usize = 128;
+    use crate::calculate::drawing_process::DRAWING_CANVAS_SIZE;
     let imgpath =
         image::ImageBuffer::from_vec(source.width, source.height, source.source_img).unwrap();
     let assignments = (0..(DRAWING_CANVAS_SIZE * DRAWING_CANVAS_SIZE)).collect::<Vec<usize>>();
@@ -48,7 +44,6 @@ pub fn init_canvas(
     sim.set_assignments(assignments, sidelen);
     (seeds_n as u32, seeds, colors, sim)
 }
-*/
 
 fn init_colors(
     sidelen: u32,

@@ -10,3 +10,4 @@ pub mod headless_render;
 // 模擬和 preset 模塊
 pub mod morph_sim;
 pub mod preset;
+pub mod calculate;

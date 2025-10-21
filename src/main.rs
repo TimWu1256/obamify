@@ -1,9 +1,10 @@
 use obamify::headless_render::HeadlessRenderer;
-use obamify::{SeedColor, SeedPos};
+// SeedColor/SeedPos are re-exported via `morph_sim::init_image` return types; no direct import needed here
 use obamify::morph_sim;
 use obamify::preset::{Preset, UnprocessedPreset};
 use std::path::{Path, PathBuf};
 use image::imageops::FilterType;
+use color_quant::NeuQuant;
 // simple uniform 3-3-2 quantization will be used for a deterministic global palette
 
 // Defaults chosen to match main branch GUI behavior
@@ -21,6 +22,7 @@ fn get_env_u32(key: &str, default: u32) -> u32 {
         .unwrap_or(default)
 }
 
+#[allow(dead_code)]
 fn get_env_u16(key: &str, default: u16) -> u16 {
     std::env::var(key)
         .ok()
@@ -38,6 +40,23 @@ fn get_env_f32(key: &str, default: f32) -> f32 {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
+
+    // Ensure XDG_RUNTIME_DIR exists in headless/container environments.
+    // Some containers don't set this; wgpu/Vulkan may require it for socket/runtime paths.
+    match std::env::var("XDG_RUNTIME_DIR") {
+        Ok(dir) => {
+            if !std::path::Path::new(&dir).exists() {
+                // Try to create it as a fallback
+                let _ = std::fs::create_dir_all(&dir);
+            }
+        }
+        Err(_) => {
+            // Default fallback: try to create /tmp/xdg_runtime but do not set env here.
+            // Prefer the container/runtime to inject XDG_RUNTIME_DIR (docker-compose sets it).
+            let fallback = "/tmp/xdg_runtime";
+            let _ = std::fs::create_dir_all(fallback);
+        }
+    }
 
     let args: Vec<String> = std::env::args().collect();
 
@@ -119,7 +138,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let source_preset = create_preset_from_image(&src, 128)?;
 
         // Get target image: either from preset or use Obama target
-        let target_img_raw = if use_preset_target {
+    let _target_img_raw = if use_preset_target {
             let target_preset = load_preset(&target_name)?;
             target_preset.inner.source_img
         } else {
@@ -135,13 +154,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             image::imageops::resize(&cropped, 128, 128, FilterType::Lanczos3).into_raw()
         };
 
-        // Calculate assignments using simplified genetic algorithm
+        // Calculate assignments using genetic algorithm (align with GUI)
         println!("Calculating optimal pixel assignments (this may take a moment)...");
+        // Build per-target weights from bundled weights256.png (matches GUI) when available
+    let _weights_vec: Vec<i64> = if std::path::Path::new("assets/weights256.png").exists() {
+            let weights_img = image::open("assets/weights256.png")?.to_rgb8();
+            let (ww, hh) = (weights_img.width(), weights_img.height());
+            let side_w = ww.min(hh);
+            let xw0 = (ww - side_w) / 2;
+            let yw0 = (hh - side_w) / 2;
+            let cropped_w = image::imageops::crop_imm(&weights_img, xw0, yw0, side_w, side_w).to_image();
+            let weights_resized = image::imageops::resize(&cropped_w, 128, 128, FilterType::Lanczos3);
+            weights_resized.pixels().map(|p| p[0] as i64).collect()
+        } else {
+            // Fallback: uniform weights (255) as GUI does when custom target provided
+            vec![255i64; (128 * 128) as usize]
+        };
+
         let assignments = calculate_assignments_genetic(
             &source_preset.inner.source_img,
-            &target_img_raw,
+            &_target_img_raw,
             128,
-            13 // proximity_importance: higher = preserve more spatial structure (GUI default is 13, range 0-50)
+            13, // proximity_importance: higher = preserve more spatial structure (GUI default is 13, range 0-50)
+            &_weights_vec,
         );
 
         let mut preset = source_preset;
@@ -163,7 +198,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // load preset (either runtime or embedded) and initialize sim
     let preset = if let Some(p) = runtime_preset { p } else { load_preset(&preset_name)? };
-    let (seed_count, mut seeds, mut colors, mut sim) = morph_sim::init_image(render_resolution, preset);
+    let (seed_count, mut seeds, colors, mut sim) = morph_sim::init_image(render_resolution, preset);
 
     // Apply dst_force to all cells (proximity importance parameter)
     for cell in &mut sim.cells {
@@ -220,37 +255,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    println!("Building deterministic 3-3-2 global palette and encoding GIF...");
+    println!("Building GIF palette with NeuQuant (match GUI) and encoding GIF...");
 
     // ensure output directory exists
     if let Some(parent) = output_path.parent() {
         std::fs::create_dir_all(parent)?;
     }
 
-    // Build 3-3-2 palette (R:3 bits, G:3 bits, B:2 bits) => 256 entries
-    let mut palette_vec: Vec<u8> = Vec::with_capacity(256 * 3);
-    for i in 0..256u32 {
-        let r3 = ((i >> 5) & 0x7) as u8;
-        let g3 = ((i >> 2) & 0x7) as u8;
-        let b2 = (i & 0x3) as u8;
-        let r = ((r3 as u16 * 255u16) / 7u16) as u8;
-        let g = ((g3 as u16 * 255u16) / 7u16) as u8;
-        let b = ((b2 as u16 * 255u16) / 3u16) as u8;
-        palette_vec.push(r);
-        palette_vec.push(g);
-        palette_vec.push(b);
+    // Build NeuQuant palette from active seed colors (match GUI behavior)
+    let mut colors_bytes: Vec<u8> = Vec::with_capacity(colors.len() * 4);
+    for c in &colors {
+        // GUI maps floats to bytes with 1.0 -> 255, otherwise f*256
+        for f in &c.rgba {
+            let b = if *f == 1.0 { 255u8 } else { (*f * 256.0) as u8 };
+            colors_bytes.push(b);
+        }
     }
 
-    let mut encoder = gif::Encoder::new(std::fs::File::create(&output_path)?, output_resolution as u16, output_resolution as u16, &palette_vec)?;
-    encoder.set_repeat(gif::Repeat::Infinite)?;
+    // Create NeuQuant palette (samplefac=1 for best quality like GUI)
+    let nq = NeuQuant::new(1, 256, &colors_bytes);
+    let palette_map = nq.color_map_rgb();
 
-    // mapping function: directly map RGB to 3-3-2 index
-    let map_index = |r: u8, g: u8, b: u8| -> u8 {
-        let r3 = r >> 5;
-        let g3 = g >> 5;
-        let b2 = b >> 6;
-        ((r3 << 5) | (g3 << 2) | b2) as u8
-    };
+    let mut encoder = gif::Encoder::new(std::fs::File::create(&output_path)?, output_resolution as u16, output_resolution as u16, &palette_map)?;
+    encoder.set_repeat(gif::Repeat::Infinite)?;
 
     // Check if we need to resize frames
     let needs_resize = render_resolution != output_resolution;
@@ -266,7 +293,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             rgba
         };
 
-        let pixels: Vec<u8> = final_rgba.chunks_exact(4).map(|pix| map_index(pix[0], pix[1], pix[2])).collect();
+        // Map pixels to NeuQuant palette indices
+        let pixels: Vec<u8> = final_rgba
+            .chunks_exact(4)
+            .map(|pix| nq.index_of(pix) as u8)
+            .collect();
+
         let mut frame = gif::Frame::from_indexed_pixels(output_resolution as u16, output_resolution as u16, pixels, None);
         frame.delay = gif_delay;
         encoder.write_frame(&frame)?;
@@ -352,11 +384,13 @@ fn create_preset_from_image(path: &Path, target_size: u32) -> Result<Preset, Box
 
 // Simplified genetic algorithm for calculating pixel assignments
 // Mimics GUI's process_genetic but optimized for CLI speed
+#[allow(dead_code)]
 fn calculate_assignments_genetic(
     source_rgb: &[u8],
     target_rgb: &[u8],
     sidelen: u32,
     proximity_importance: i64,
+    weights: &[i64],
 ) -> Vec<usize> {
     let n = (sidelen * sidelen) as usize;
     assert_eq!(source_rgb.len(), n * 3);
@@ -375,43 +409,37 @@ fn calculate_assignments_genetic(
         let tb = target_rgb[i * 3 + 2];
 
         // Calculate initial heuristic (lower is better)
-        // Formula matches GUI: color * color_weight + (spatial * proximity_importance)²
+        // Formula matches GUI: color * color_weight + (spatial * proximity_importance).pow(2)
         let spatial = 0i64; // initially at same position
         let color = (sr as i64 - tr as i64).pow(2)
                   + (sg as i64 - tg as i64).pow(2)
                   + (sb as i64 - tb as i64).pow(2);
-        let color_weight = 1i64; // simplified, GUI uses weights from target image
+        // Use per-target weight like GUI
+        let color_weight = weights[i];
         let h = color * color_weight + (spatial * proximity_importance).pow(2);
 
         pixels.push((x, y, sr, sg, sb, h));
     }
 
-    // Simple deterministic "random" for reproducibility
-    let mut seed = 12345u64;
-    let mut rng = || -> u32 {
-        seed = seed.wrapping_mul(1103515245).wrapping_add(12345);
-        (seed / 65536) as u32
-    };
+    // Note: GUI's process_genetic (used for preset generation) does NOT use STROKE_REWARD.
+    // STROKE_REWARD is only used in drawing_process_genetic (interactive drawing mode).
+    // For static preset calculation, we rely purely on color + spatial heuristic.
 
-    let swaps_per_gen = n * 3; // reduced from GUI's default for speed
-    let max_iterations = 100; // limit iterations for CLI speed
+    // Use same RNG as GUI for determinism
+    let mut rng = frand::Rand::with_seed(12345);
 
-    for iter in 0..max_iterations {
-        let max_dist = if iter < 30 { sidelen }
-                       else if iter < 60 { sidelen / 2 }
-                       else if iter < 80 { sidelen / 4 }
-                       else { 4 };
+    const SWAPS_PER_GENERATION_PER_PIXEL: usize = 128;
+    let swaps_per_generation = SWAPS_PER_GENERATION_PER_PIXEL * n;
 
-        let mut swaps_made = 0;
-        for _ in 0..swaps_per_gen {
-            let apos = (rng() % n as u32) as usize;
+    let mut max_dist = sidelen;
+    loop {
+        let mut swaps_made = 0usize;
+        for _ in 0..swaps_per_generation {
+            let apos = rng.gen_range(0..n as u32) as usize;
             let ax = apos as u16 % sidelen as u16;
             let ay = apos as u16 / sidelen as u16;
-
-            let dx = ((rng() % (max_dist * 2)) as i16) - max_dist as i16;
-            let dy = ((rng() % (max_dist * 2)) as i16) - max_dist as i16;
-            let bx = (ax as i16 + dx).clamp(0, sidelen as i16 - 1) as u16;
-            let by = (ay as i16 + dy).clamp(0, sidelen as i16 - 1) as u16;
+            let bx = (ax as i16 + rng.gen_range(-(max_dist as i16)..(max_dist as i16 + 1))).clamp(0, sidelen as i16 - 1) as u16;
+            let by = (ay as i16 + rng.gen_range(-(max_dist as i16)..(max_dist as i16 + 1))).clamp(0, sidelen as i16 - 1) as u16;
             let bpos = by as usize * sidelen as usize + bx as usize;
 
             if apos == bpos { continue; }
@@ -423,28 +451,26 @@ fn calculate_assignments_genetic(
             let tg_b = target_rgb[bpos * 3 + 1];
             let tb_b = target_rgb[bpos * 3 + 2];
 
-            // Calculate improvement if swapped
             let (_, _, sr_a, sg_a, sb_a, h_a) = pixels[apos];
             let (_, _, sr_b, sg_b, sb_b, h_b) = pixels[bpos];
 
-            // pixel A -> position B (matches GUI formula)
             let spatial_ab = (bx as i64 - ax as i64).pow(2) + (by as i64 - ay as i64).pow(2);
             let color_ab = (sr_a as i64 - tr_b as i64).pow(2)
                          + (sg_a as i64 - tg_b as i64).pow(2)
                          + (sb_a as i64 - tb_b as i64).pow(2);
-            let color_weight = 1i64;
-            let h_a_at_b = color_ab * color_weight + (spatial_ab * proximity_importance).pow(2);
+            let color_weight_b = weights[bpos];
+            let h_a_at_b = color_ab * color_weight_b + (spatial_ab * proximity_importance).pow(2);
 
-            // pixel B -> position A
-            let spatial_ba = spatial_ab; // symmetric
+            let spatial_ba = spatial_ab;
             let color_ba = (sr_b as i64 - tr_a as i64).pow(2)
                          + (sg_b as i64 - tg_a as i64).pow(2)
                          + (sb_b as i64 - tb_a as i64).pow(2);
-            let h_b_at_a = color_ba * color_weight + (spatial_ba * proximity_importance).pow(2);
+            let color_weight_a = weights[apos];
+            let h_b_at_a = color_ba * color_weight_a + (spatial_ba * proximity_importance).pow(2);
 
-            let improvement = (h_a + h_b) - (h_a_at_b + h_b_at_a);
-            if improvement > 0 {
-                // Swap
+            let improvement_a = h_a - h_a_at_b;
+            let improvement_b = h_b - h_b_at_a;
+            if improvement_a + improvement_b > 0 {
                 pixels.swap(apos, bpos);
                 pixels[apos].5 = h_b_at_a;
                 pixels[bpos].5 = h_a_at_b;
@@ -452,12 +478,10 @@ fn calculate_assignments_genetic(
             }
         }
 
-        if iter % 20 == 0 {
-            println!("  Iteration {}/{}, swaps: {}", iter, max_iterations, swaps_made);
-        }
+        // shrink max_dist multiplicatively like GUI
+        max_dist = (max_dist as f32 * 0.99).max(2.0) as u32;
 
-        if max_dist <= 4 && swaps_made < 10 {
-            println!("  Converged at iteration {} (swaps: {})", iter, swaps_made);
+        if max_dist < 4 && swaps_made < 10 {
             break;
         }
     }
