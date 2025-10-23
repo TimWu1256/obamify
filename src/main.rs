@@ -112,7 +112,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // If positional[0] matches a built-in preset name, use it as the target mapping.
         // Otherwise use Obama target (auto mode)
         let mut target_name = "auto_obama".to_string();
-        let mut out_path = PathBuf::from("custom.gif");
+        // default outputs go into the output/ directory
+        let mut out_path = PathBuf::from("output/custom.gif");
         let mut use_preset_target = false;
 
         if positional.len() >= 1 {
@@ -124,7 +125,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     if positional.len() >= 2 {
                         out_path = PathBuf::from(&positional[1]);
                     } else {
-                        out_path = PathBuf::from(format!("{}_from_custom.gif", target_name));
+                        out_path = PathBuf::from(format!("output/{}_from_custom.gif", target_name));
                     }
                 }
                 Err(_) => {
@@ -184,8 +185,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         (target_name, out_path, Some(preset))
     } else {
-        let p = if positional.len() >= 1 { positional[0].clone() } else { "wisetree".to_string() };
-        let out = if positional.len() >= 2 { PathBuf::from(&positional[1]) } else { PathBuf::from(format!("{}.gif", p)) };
+    let p = if positional.len() >= 1 { positional[0].clone() } else { "wisetree".to_string() };
+    let out = if positional.len() >= 2 { PathBuf::from(&positional[1]) } else { PathBuf::from(format!("output/{}.gif", p)) };
         (p, out, None)
     };
 

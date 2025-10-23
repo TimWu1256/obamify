@@ -48,3 +48,27 @@ docker compose run --rm obamify-cli --preset wisetree --output output/test.gif
 ## How it works
 
 magic
+
+## Install the CLI (quick)
+
+If you want to use the CLI directly on your machine (no Docker), two quick options are provided:
+
+-   Makefile (build + install to $HOME/.cargo/bin):
+
+```sh
+make release
+make install
+```
+
+-   Simple installer script (supports downloading a prebuilt binary via OBAMIFY_RELEASE_URL or using cargo):
+
+```sh
+./scripts/install.sh
+# or with a custom prefix:
+PREFIX=$HOME/.local ./scripts/install.sh
+```
+
+Notes:
+
+-   `make install` copies the `target/release/obamify` binary to `~/.cargo/bin/obamify` by default.
+-   If you don't have Rust installed, set `OBAMIFY_RELEASE_URL` to a direct URL of a prebuilt `obamify` binary and the installer will download it for you.
