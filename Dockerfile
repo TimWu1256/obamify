@@ -48,9 +48,9 @@ RUN apt-get update && apt-get install -y \
 
 ENV VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json
 ENV RUST_LOG=info
-ENV LISTEN_ADDR=0.0.0.0:3000
+ENV LISTEN_ADDR=0.0.0.0:8237
 
 COPY --from=builder /app/target/release/obamify-api /usr/local/bin/
 
-EXPOSE 3000
+EXPOSE 8237
 CMD ["obamify-api"]

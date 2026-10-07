@@ -10,6 +10,12 @@ services:
     command: cargo run --release -p obamify-api
     environment:
       - RUST_LOG=debug
+    networks:
+      - image-network
+
+networks:
+  image-network:
+    external: true
 
 volumes:
   cargo-cache:

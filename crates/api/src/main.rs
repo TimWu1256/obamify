@@ -21,7 +21,7 @@ async fn main() {
         .layer(TraceLayer::new_for_http());
 
     let addr = std::env::var("LISTEN_ADDR")
-        .unwrap_or_else(|_| "0.0.0.0:3000".to_string());
+        .unwrap_or_else(|_| "0.0.0.0:8237".to_string());
 
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
     log::info!("obamify-api listening on {addr}");

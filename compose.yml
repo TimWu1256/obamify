@@ -6,10 +6,16 @@ services:
     image: obamify-api:latest
     container_name: obamify-api
     ports:
-      - "3000:3000"
+      - "8237:8237"
     environment:
       - RUST_LOG=info
-      - LISTEN_ADDR=0.0.0.0:3000
+      - LISTEN_ADDR=0.0.0.0:8237
       - XDG_RUNTIME_DIR=/tmp/xdg_runtime
     tmpfs:
       - /tmp/xdg_runtime
+    networks:
+      - image-network
+
+networks:
+  image-network:
+    external: true
