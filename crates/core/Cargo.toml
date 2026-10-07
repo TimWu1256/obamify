@@ -1,0 +1,16 @@
+[package]
+name = "obamify-core"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+
+[dependencies]
+image       = { workspace = true }
+serde       = { workspace = true }
+bytemuck    = { workspace = true }
+log         = { workspace = true }
+pathfinding = "4.13.0"
+indexmap    = "2.11.0"
+frand       = "0.10.1"
+uuid        = { version = "1.18.1", features = ["v4", "serde"] }
+palette     = "0.7.6"
