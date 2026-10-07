@@ -1,0 +1,15 @@
+services:
+  api:
+    build:
+      target: builder
+    image: obamify-api:dev
+    container_name: obamify-api-dev
+    volumes:
+      - .:/app
+      - cargo-cache:/usr/local/cargo/registry
+    command: cargo run --release -p obamify-api
+    environment:
+      - RUST_LOG=debug
+
+volumes:
+  cargo-cache:
