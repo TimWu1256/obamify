@@ -31,10 +31,26 @@ use std::error::Error;
 //     Ok(dir_name)
 // }
 
+pub trait ProgressSink {
+    fn send(&mut self, msg: ProgressMsg);
+}
+
 // Native-friendly adapter
+impl ProgressSink for std::sync::mpsc::SyncSender<ProgressMsg> {
+    fn send(&mut self, msg: ProgressMsg) {
+        let _ = std::sync::mpsc::SyncSender::send(self, msg);
+    }
 }
 
 // Allow using closures as progress sinks in WASM
+impl<T> ProgressSink for T
+where
+    T: FnMut(ProgressMsg),
+{
+    fn send(&mut self, msg: ProgressMsg) {
+        self(msg);
+    }
+}
 
 #[allow(clippy::type_complexity)]
 pub(crate) fn get_images(
@@ -152,7 +168,7 @@ impl GenerationSettings {
         Ok((target, weights))
     }
 
-    pub(crate) fn get_raw_target(&self) -> SourceImg {
+    pub fn get_raw_target(&self) -> SourceImg {
         if let Some((w, h, data)) = &self.custom_target {
             image::ImageBuffer::from_vec(*w, *h, data.clone()).unwrap()
         } else {
@@ -162,7 +178,7 @@ impl GenerationSettings {
         }
     }
 
-    pub(crate) fn set_raw_target(&mut self, img: SourceImg) {
+    pub fn set_raw_target(&mut self, img: SourceImg) {
         let (w, h) = img.dimensions();
         let data = img.into_raw();
         self.custom_target = Some((w, h, data));

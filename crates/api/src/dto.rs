@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 /// POST /obamify/assignments 回傳格式
 #[derive(Serialize)]

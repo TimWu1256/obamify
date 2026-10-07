@@ -15,3 +15,9 @@ bytemuck    = { version = "1.16", features = ["derive"] }
 tokio       = { version = "1", features = ["full"] }
 log         = "0.4.27"
 env_logger  = "0.11.8"
+
+[profile.release]
+opt-level = 3
+
+[profile.dev.package."*"]
+opt-level = 2

@@ -19,7 +19,7 @@ pub struct PixelData {
     pub last_edited: u32,
 }
 impl PixelData {
-    pub(crate) fn init_canvas(frame_count: u32) -> Vec<PixelData> {
+    pub fn init_canvas(frame_count: u32) -> Vec<PixelData> {
         vec![
             PixelData {
                 stroke_id: 0,

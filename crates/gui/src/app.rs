@@ -1,7 +1,6 @@
 use obamify_core::{SeedPos, SeedColor};
 use obamify_core::calculate;
 use obamify_core::morph_sim;
-use obamify_core::preset;
 mod gif_recorder;
 mod gui;
 
@@ -1773,7 +1772,7 @@ macro_rules! include_presets {
             vec![
                 $({
                     let img = image::load_from_memory(include_bytes!(concat!(
-                        "../presets/",
+                        "../../../presets/",
                         $name,
                         "/source.png"
                     )))
@@ -1786,7 +1785,7 @@ macro_rules! include_presets {
                             height: img.height(),
                             source_img: img.into_raw(),
                         },
-                        assignments: include_str!(concat!("../presets/", $name, "/assignments.json"))
+                        assignments: include_str!(concat!("../../../presets/", $name, "/assignments.json"))
                             .to_string()
                             .strip_prefix('[')
                             .unwrap()

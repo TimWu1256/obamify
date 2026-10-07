@@ -1,6 +1,6 @@
 use axum::{
     extract::Multipart,
-    http::{StatusCode, header},
+    http::StatusCode,
     response::{IntoResponse, Response},
     Json,
 };
@@ -8,9 +8,8 @@ use obamify_core::{
     calculate::{self, ProgressMsg},
     calculate::util::{Algorithm, GenerationSettings, CropScale},
     preset::{Preset, UnprocessedPreset},
-    ports::ProgressSink,
 };
-use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
+use std::sync::{Arc, atomic::AtomicBool};
 use uuid::Uuid;
 
 use crate::dto::{AssignmentsResponse, ErrorResponse};

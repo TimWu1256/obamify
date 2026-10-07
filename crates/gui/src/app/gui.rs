@@ -312,7 +312,7 @@ impl App for ObamifyApp {
                             }
 
                             if ui
-                                .add(egui::Button::new(egui::RichText::new("??")))
+                                .add(egui::Button::new(egui::RichText::new("🏠")))
                                 .on_hover_text("transform mode")
                                 .clicked()
                             {
@@ -386,7 +386,7 @@ impl App for ObamifyApp {
                                         let name = self.sim.name();
                                         if name.chars().count() > 13 {
                                             let truncated: String = name.chars().take(10).collect();
-                                            format!("{truncated}??)
+                                            format!("{truncated}…")
                                         } else {
                                             name.clone()
                                         }
@@ -489,7 +489,7 @@ impl App for ObamifyApp {
                                     );
 
                                     let button = egui::Button::new("obamify new image")
-                                        .stroke(egui::Stroke::new(1.0, glow_color));
+                                        .stroke(egui::Stroke::new(1.0_f32, glow_color));
                                     ui.add(button)
                                 } else {
                                     ui.button("obamify new image")
@@ -526,7 +526,7 @@ impl App for ObamifyApp {
                             ui.separator();
 
                             if ui
-                                .add(egui::Button::new(egui::RichText::new("??)))
+                                .add(egui::Button::new(egui::RichText::new("✏")))
                                 .on_hover_text("drawing mode")
                                 .clicked()
                             {

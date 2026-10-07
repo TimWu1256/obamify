@@ -12,7 +12,6 @@ use crate::{
     calculate::util::{GenerationSettings, ProgressSink},
     preset::{Preset, UnprocessedPreset},
 };
-use egui::ahash::AHasher;
 use pathfinding::prelude::Weights;
 use serde::{Deserialize, Serialize};
 
@@ -101,7 +100,7 @@ impl ProgressMsg {
     }
 }
 
-type FxIndexSet<K> = indexmap::IndexSet<K, std::hash::BuildHasherDefault<AHasher>>;
+type FxIndexSet<K> = indexmap::IndexSet<K>;
 
 pub fn process_optimal<S: ProgressSink>(
     unprocessed: UnprocessedPreset,
